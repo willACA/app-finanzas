@@ -1,0 +1,19 @@
+rules_version = '2';service cloud.firestore {match /databases/{database}/documents {// Regla para Negocios: Cualquiera puede leer la lista de negocios.
+match /negocios/{negocioId} {
+  allow read: if true;
+  
+  // Las subcolecciones (cierres, gastos, etc.) permanecen protegidas.
+  // Solo el backend (Cloud Functions) puede escribir en ellas.
+  match /{allPaths=**} {
+    allow read, write: if false;
+  }
+}
+
+// --- NUEVA REGLA PARA CAJEROS ---
+// Cualquiera puede leer la lista de cajeros para poblar el formulario.
+match /cajeros/{cajeroId} {
+  allow read: if true;
+  // Nadie puede modificar la lista de cajeros desde el cliente.
+  allow write: if false;
+}
+}}
