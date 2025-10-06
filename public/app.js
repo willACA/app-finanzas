@@ -16,18 +16,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const functions = getFunctions(app, 'us-central1');
+const functions = getFunctions(app, 'us-central1'); 
 
-// --- 3. REFERENCIAS A LAS CLOUD FUNCTIONS ---
-const obtenerCajaChica = httpsCallable(functions, 'obtenerCajaChicaAnterior');
-const guardarCierreFunction = httpsCallable(functions, 'procesarYGuardarCierre');
-
-// --- 4. CONEXIÓN A EMULADORES (SOLO PARA DESARROLLO LOCAL) ---
-if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
-    console.log("Estamos en local. Conectando a los emuladores...");
+// --- 3. CONEXIÓN A EMULADORES (SI APLICA) ---
+if (window.location.hostname === "127.0.0.1") {
+    console.log("📍 Modo local detectado. Conectando a los emuladores...");
     connectFirestoreEmulator(db, '127.0.0.1', 8080);
     connectFunctionsEmulator(functions, '127.0.0.1', 5001);
 }
+
+// --- 4. REFERENCIAS A LAS CLOUD FUNCTIONS ---
+const obtenerCajaChica = httpsCallable(functions, 'obtenerCajaChicaAnterior');
+const guardarCierreFunction = httpsCallable(functions, 'procesarYGuardarCierre');
+
 
 // --- 5. LÓGICA DE LA APLICACIÓN ---
 document.addEventListener('DOMContentLoaded', function() {
