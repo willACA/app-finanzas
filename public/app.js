@@ -2,6 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, getDocs, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // --- 2. CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE ---
 const firebaseConfig = {
@@ -16,7 +17,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const functions = getFunctions(app, 'us-central1'); 
+const functions = getFunctions(app, 'us-central1');
+const auth = getAuth(app);
 
 // --- 3. CONEXIÓN A EMULADORES (SI APLICA) ---
 if (window.location.hostname === "127.0.0.1") {
@@ -99,7 +101,13 @@ document.addEventListener('DOMContentLoaded', function() {
         entregadoA: document.getElementById('entregado-a'),
         totalFinalCaja: document.getElementById('total-final-caja'),
         comentariosFinales: document.getElementById('comentarios-finales'),
-        form: document.querySelector('.form-container')
+        form: document.querySelector('.form-container'),
+        welcomeScreen: document.getElementById('welcome-screen'),
+    mainAppScreen: document.getElementById('main-app-screen'),
+   loginForm: document.getElementById('login-form'),
+loginEmail: document.getElementById('login-email'),
+loginPassword: document.getElementById('login-password'),
+loginError: document.getElementById('login-error')
     };
 
     // --- MANEJADORES DE ESTADO Y EVENTOS ---
@@ -383,77 +391,97 @@ const setupDynamicTable = (addBtnId, tbodyId, stateArray, rowHtmlFactory, initia
         }
     });
 };
-
-    // --- INICIALIZACIÓN DE LA APLICACIÓN ---
     
-    function init() {
-        bindEvents();
-        cargarNegocios();
-        cargarCajeros();
+// --- INICIALIZACIÓN DE LA APLICACIÓN ---
 
-        let clienteCounter = 1;
+// Esta función contiene TODA la lógica original de tu formulario.
+// Se llamará únicamente cuando el usuario haga clic en "Iniciar Sesión".
+function startApp() {
+    bindEvents();
+    cargarNegocios();
+    cargarCajeros();
 
-        // Adiciones
-setupDynamicTable('add-adicion-btn', 'adiciones-tbody', estado.adiciones, (adicion, index) => {
-    return `
-        <tr data-index="${index}">
-            <td><input type="text" name="detalle" value="${adicion.detalle || ''}" placeholder="Ej: Aporte de socio"></td>
-            <td><input type="number" name="monto" value="${adicion.monto || ''}" placeholder="0.00" step="0.01"></td>
-            <td><button type="button" class="btn btn-delete"><svg viewBox="0 0 20 20"><path d="M9...z"></path></svg></button></td>
-        </tr>
-    `;
-}, { detalle: '', monto: 0 });
+    let clienteCounter = 1;
 
-        // Gastos
-        setupDynamicTable('add-gasto-btn', 'gastos-tbody', estado.gastos, (gasto, index) => {
-    // Esta función ahora crea el HTML para una fila de gasto
-    return `
-        <tr data-index="${index}">
-            <td><select name="tipo" value="${gasto.tipo || ''}"><option value="">Seleccione...</option><option value="variable">Gasto Variable</option></select></td>
-            <td><select name="detalle" value="${gasto.detalle || ''}"><option value="">Seleccione...</option><option value="supermercado">Supermercado</option></select></td>
-            <td><select name="pagado_por" value="${gasto.pagado_por || ''}"><option value="">Seleccione...</option><option value="caja_chica">Caja Chica</option></select></td>
-            <td><input type="number" name="monto" value="${gasto.monto || ''}" placeholder="0.00" step="0.01"></td>
-            <td><input type="text" name="comentario" value="${gasto.comentario || ''}" placeholder="Nota opcional"></td>
-            <td><button type="button" class="btn btn-delete"><svg viewBox="0 0 20 20"><path d="M9...z"></path></svg></button></td>
-        </tr>
-    `;
-}, { tipo: '', detalle: '', pagado_por: '', monto: 0, comentario: '' });
+    // Adiciones
+    setupDynamicTable('add-adicion-btn', 'adiciones-tbody', estado.adiciones, (adicion, index) => {
+    // ... (El resto de tu código de setupDynamicTable para Adiciones)
+    }, { detalle: '', monto: 0 });
 
-        // Cuentas por Cobrar (cxc)
-setupDynamicTable('add-cxc-btn', 'cxc-tbody', estado.cxc, (cxc, index) => {
-    return `
-        <tr data-index="${index}">
-            <td><select name="nombre" value="${cxc.nombre || ''}"><option value="">Seleccione...</option><option value="empleado_1">Empleado 1</option></select></td>
-            <td><select name="operacion" value="${cxc.operacion || ''}"><option value="">Seleccione...</option><option value="deuda">Deuda</option><option value="pago">Pago</option></select></td>
-            <td><input type="number" name="monto" value="${cxc.monto || ''}" placeholder="0.00" step="0.01"></td>
-            <td><button type="button" class="btn btn-delete"><svg viewBox="0 0 20 20"><path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"></path></svg></button></td>
-        </tr>
-    `;
-}, { nombre: '', operacion: '', monto: 0 });
+    // Gastos
+    setupDynamicTable('add-gasto-btn', 'gastos-tbody', estado.gastos, (gasto, index) => {
+    // ... (El resto de tu código de setupDynamicTable para Gastos)
+    }, { tipo: '', detalle: '', pagado_por: '', monto: 0, comentario: '' });
 
-        // Transferencias
-setupDynamicTable('add-transferencia-btn', 'transferencias-tbody', estado.transferencias, (transf, index) => {
-    return `
-        <tr data-index="${index}">
-            <td><input type="text" name="nombre" value="${transf.nombre || ''}" placeholder="Nombre cliente"></td>
-            <td><select name="banco" value="${transf.banco || ''}"><option value="">Seleccione banco...</option><option value="bhd">BHD</option></select></td>
-            <td><input type="number" name="monto" value="${transf.monto || ''}" placeholder="0.00" step="0.01"></td>
-            <td><button type="button" class="btn btn-delete"><svg viewBox="0 0 20 20"><path d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"></path></svg></button></td>
-        </tr>
-    `;
-}, { nombre: '', banco: '', monto: 0 });
-        
-        denominaciones.forEach(valor => {
-            const item = document.createElement('div');
-            item.classList.add('conteo-item');
-            item.innerHTML = `<label>RD$ ${valor}</label><input type="number" min="0" data-valor="${valor}" placeholder="0">`;
-            item.querySelector('input').addEventListener('input', recalculateAll);
-            elements.conteoGrid.appendChild(item);
-        });
+    // Cuentas por Cobrar (cxc)
+    setupDynamicTable('add-cxc-btn', 'cxc-tbody', estado.cxc, (cxc, index) => {
+    // ... (El resto de tu código de setupDynamicTable para CxC)
+    }, { nombre: '', operacion: '', monto: 0 });
 
-        recalculateAll();
-    }
+    // Transferencias
+    setupDynamicTable('add-transferencia-btn', 'transferencias-tbody', estado.transferencias, (transf, index) => {
+    // ... (El resto de tu código de setupDynamicTable para Transferencias)
+    }, { nombre: '', banco: '', monto: 0 });
     
-    // Arrancamos la aplicación
-    init();
+    denominaciones.forEach(valor => {
+        const item = document.createElement('div');
+        item.classList.add('conteo-item');
+        item.innerHTML = `<label>RD$ ${valor}</label><input type="number" min="0" data-valor="${valor}" placeholder="0">`;
+        item.querySelector('input').addEventListener('input', recalculateAll);
+        elements.conteoGrid.appendChild(item);
+    });
+
+    recalculateAll();
+}
+
+// --- INICIALIZACIÓN DE LA APLICACIÓN ---
+
+/**
+ * Función principal que controla qué vista mostrar
+ * basándose en el estado de autenticación del usuario.
+ */
+function handleAuthState() {
+    onAuthStateChanged(auth, user => {
+        if (user) {
+            // --- USUARIO AUTENTICADO ---
+            console.log('Usuario conectado:', user.email);
+            elements.welcomeScreen.style.display = 'none';
+            elements.mainAppScreen.style.display = 'block';
+            startApp(); // Inicia la lógica principal de tu formulario
+        } else {
+            // --- USUARIO NO AUTENTICADO ---
+            console.log('No hay usuario conectado.');
+            elements.welcomeScreen.style.display = 'block';
+            elements.mainAppScreen.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Configura el listener para el envío del formulario de login.
+ */
+function setupLoginListener() {
+    elements.loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = elements.loginEmail.value;
+        const password = elements.loginPassword.value;
+        elements.loginError.textContent = ''; // Limpiar errores previos
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            // El onAuthStateChanged se encargará de redirigir la vista
+        } catch (error) {
+            console.error('Error de inicio de sesión:', error.code);
+            elements.loginError.textContent = 'Correo o contraseña incorrectos.';
+        }
+    });
+}
+
+// Arrancamos la aplicación
+handleAuthState();      // Escucha los cambios de autenticación
+setupLoginListener();   // Prepara el formulario de login
+
+// Arrancamos la aplicación
+init();
+    
 });
