@@ -1,19 +1,19 @@
-rules_version = '2';service cloud.firestore {match /databases/{database}/documents {// Regla para Negocios: Cualquiera puede leer la lista de negocios.
-match /negocios/{negocioId} {
-  allow read: if true;
-  
-  // Las subcolecciones (cierres, gastos, etc.) permanecen protegidas.
-  // Solo el backend (Cloud Functions) puede escribir en ellas.
-  match /{allPaths=**} {
-    allow read, write: if false;
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regla de Aislamiento Multi-Inquilino:
+    // Un usuario solo puede leer o escribir en los documentos
+    // que pertenecen a un negocio del cual es el dueño ('ownerId').
+    match /businesses/{businessId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId;
+    }
+
+    // Nota: Por ahora, estamos denegando la creación de nuevos negocios directamente desde el cliente.
+    // Esto se hará de forma segura a través de una Cloud Function en el futuro (Tarea F2.M3.T3.3).
+    match /businesses/{businessId} {
+      allow create: if false; 
+    }
   }
 }
-
-// --- NUEVA REGLA PARA CAJEROS ---
-// Cualquiera puede leer la lista de cajeros para poblar el formulario.
-match /cajeros/{cajeroId} {
-  allow read: if true;
-  // Nadie puede modificar la lista de cajeros desde el cliente.
-  allow write: if false;
-}
-}}
